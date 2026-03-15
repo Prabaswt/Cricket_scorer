@@ -368,6 +368,94 @@
     line-height: 1;
   }
   .overs-edit-icon:hover { opacity: 1; }
+
+  /* Over summary panel */
+  #overSummary {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; margin-bottom: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.04); overflow: hidden;
+  }
+
+  .over-summary-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; cursor: pointer; user-select: none;
+    background: var(--card);
+  }
+
+  .over-summary-header:hover { background: #f8fafc; }
+
+  .over-summary-title {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  .over-summary-toggle {
+    font-size: 11px; color: var(--sub); transition: transform .2s;
+  }
+
+  .over-summary-toggle.open { transform: rotate(180deg); }
+
+  #overSummaryBody {
+    display: none; padding: 0 10px 10px;
+  }
+
+  #overSummaryBody.open { display: block; }
+
+  .over-rows {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+
+  .over-row {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border-radius: 8px; padding: 6px 10px;
+  }
+
+  .over-row-num {
+    font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 700; color: var(--muted); min-width: 42px;
+    white-space: nowrap;
+  }
+
+  .over-row-bar-wrap {
+    flex: 1; height: 8px; background: #e2e8f0;
+    border-radius: 4px; overflow: hidden;
+  }
+
+  .over-row-bar {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--green), #86efac);
+    transition: width .4s ease;
+  }
+
+  .over-row-runs {
+    font-family: 'Oswald', sans-serif; font-size: 14px;
+    font-weight: 700; color: var(--text); min-width: 28px;
+    text-align: right;
+  }
+
+  .over-row-extra {
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
+  #overToast {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-80px);
+    background: #0f172a; color: white;
+    font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600;
+    padding: 10px 22px; border-radius: 30px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.22);
+    z-index: 500; white-space: nowrap;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+    opacity: 0; pointer-events: none;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #overToast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  .over-toast-runs {
+    background: var(--green); color: white;
+    border-radius: 14px; padding: 2px 10px;
+    font-size: 13px; font-weight: 700;
+  }
 </style>
 </head>
 <body>
@@ -378,11 +466,11 @@
   <div class="setup-card">
     <div class="field">
       <label>Team 1 — Batting First</label>
-      <input type="text" id="team1" placeholder="e.g. Chennai Super Kings" maxlength="30">
+      <input type="text" id="team1" placeholder="e.g. Chennai Super Kings" maxlength="30" onblur="applyTeamSuffix('team1')">
     </div>
     <div class="field">
       <label>Team 2 — Chasing</label>
-      <input type="text" id="team2" placeholder="e.g. Mumbai Indians" maxlength="30">
+      <input type="text" id="team2" placeholder="e.g. Mumbai Indians" maxlength="30" onblur="applyTeamSuffix('team2')">
     </div>
     <div class="field">
       <label>Overs Per Innings</label>
@@ -445,6 +533,17 @@
 
   <!-- Ball Log -->
   <div id="ballLog"></div>
+
+  <!-- Over Summary -->
+  <div id="overSummary" style="display:none;">
+    <div class="over-summary-header" onclick="toggleOverSummary()">
+      <span class="over-summary-title">📊 Over Summary</span>
+      <span class="over-summary-toggle" id="overSummaryToggle">▼</span>
+    </div>
+    <div id="overSummaryBody">
+      <div class="over-rows" id="overRows"></div>
+    </div>
+  </div>
 
   <!-- Run buttons -->
   <div class="btn-grid">
@@ -519,6 +618,12 @@
   </div>
 </div>
 
+<!-- Over complete toast -->
+<div id="overToast">
+  <span id="overToastText"></span>
+  <span class="over-toast-runs" id="overToastRuns"></span>
+</div>
+
 <!-- Overs Edit Modal -->
 <div class="modal" id="oversEditModal">
   <span class="modal-emoji">🔧</span>
@@ -584,6 +689,7 @@ function startMatch() {
 function resetState(inn) {
   score = wickets = overs = ballsInOver = 0;
   history = []; inning = inn; matchOver = false;
+  lastToastOver = -1;
 }
 
 /* ─── ACTIONS ─── */
@@ -732,7 +838,45 @@ function applyOversEdit() {
   renderLog();
 }
 
-/* ─── RECALC ─── */
+/* ─── TEAM NAME AUTO SUFFIX ─── */
+function applyTeamSuffix(inputId) {
+  const input = document.getElementById(inputId);
+  const val   = input.value.trim();
+  if (!val) return;
+  if (!/\s(team|xi|fc|cc|sc)$/i.test(val)) {
+    input.value = val + ' Team';
+  }
+}
+
+/* ─── OVER TOAST ─── */
+let toastTimer = null;
+let lastToastOver = -1;
+
+function showOverToast(overNum) {
+  if (overNum === lastToastOver) return;
+  lastToastOver = overNum;
+
+  // Calc runs in that over
+  let legal = 0; let overRuns = 0;
+  history.forEach(item => {
+    if (item.type === 'wide')   { if (legal > (overNum-1)*6 && legal <= overNum*6) overRuns++; return; }
+    if (item.type === 'noBall') { if (legal >= (overNum-1)*6 && legal < overNum*6) overRuns += item.runs; return; }
+    if (item.type === 'run' || item.type === 'wicket') {
+      if (legal >= (overNum-1)*6 && legal < overNum*6) {
+        if (item.type === 'run') overRuns += item.runs;
+      }
+      legal++;
+    }
+  });
+
+  document.getElementById('overToastText').innerText = `Over ${overNum} complete`;
+  document.getElementById('overToastRuns').innerText  = `${overRuns} runs`;
+
+  const toast = document.getElementById('overToast');
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
 function recalculate() {
   score = wickets = 0;
   let legal = 0;
@@ -750,7 +894,7 @@ function recalculate() {
 function renderChips(hist, container) {
   container.innerHTML = '';
   let legal = 0;
-  hist.forEach(item => {
+  hist.forEach((item) => {
     if (legal > 0 && legal % 6 === 0 && item.type !== 'wide' && item.type !== 'noBall') {
       const p = document.createElement('span');
       p.className = 'over-pipe'; p.innerText = '|';
@@ -781,7 +925,71 @@ function renderChips(hist, container) {
 function renderLog() {
   recalculate();
   renderChips(history, document.getElementById('ballLog'));
+  renderOverSummary();
   updateDisplay();
+}
+
+function toggleOverSummary() {
+  const body    = document.getElementById('overSummaryBody');
+  const toggle  = document.getElementById('overSummaryToggle');
+  const isOpen  = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  toggle.classList.toggle('open', !isOpen);
+}
+
+function renderOverSummary() {
+  // Build per-over data from history
+  const overData = []; // [{runs, wides, wkts, noBalls}]
+  let legal = 0;
+
+  history.forEach(item => {
+    const ov = Math.floor(legal / 6);
+    if (!overData[ov]) overData[ov] = { runs: 0, wides: 0, wkts: 0, noBalls: 0 };
+
+    if (item.type === 'run')    { overData[ov].runs += item.runs; legal++; }
+    else if (item.type === 'wicket') { overData[ov].wkts++; legal++; }
+    else if (item.type === 'wide')   { overData[ov].runs++; overData[ov].wides++; }
+    else if (item.type === 'noBall') { overData[ov].runs += item.runs; overData[ov].noBalls++; }
+  });
+
+  // Only show completed overs
+  const completedOvers = overData.filter((_, i) => {
+    // an over is complete if the next legal ball index >= (i+1)*6
+    let count = 0;
+    history.forEach(item => {
+      if (item.type === 'run' || item.type === 'wicket') count++;
+    });
+    return (i + 1) * 6 <= count;
+  });
+
+  const panel = document.getElementById('overSummary');
+  const rows  = document.getElementById('overRows');
+
+  if (completedOvers.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const maxRuns = Math.max(...completedOvers.map(o => o.runs), 1);
+
+  rows.innerHTML = '';
+  completedOvers.forEach((od, i) => {
+    const barPct = Math.round((od.runs / maxRuns) * 100);
+    const extras = [];
+    if (od.wides)   extras.push(`${od.wides}wd`);
+    if (od.noBalls) extras.push(`${od.noBalls}nb`);
+    if (od.wkts)    extras.push(`${od.wkts}W`);
+
+    const row = document.createElement('div');
+    row.className = 'over-row';
+    row.innerHTML = `
+      <span class="over-row-num">Ov ${i + 1}</span>
+      <div class="over-row-bar-wrap">
+        <div class="over-row-bar" style="width:${barPct}%"></div>
+      </div>
+      <span class="over-row-runs">${od.runs}</span>
+      ${extras.length ? `<span class="over-row-extra">${extras.join(' ')}</span>` : ''}
+    `;
+    rows.appendChild(row);
+  });
 }
 
 function updateDisplay() {
@@ -803,6 +1011,11 @@ function updateDisplay() {
 
   const pct = Math.min(100, ((overs * 6 + ballsInOver) / (maxOvers * 6)) * 100);
   document.getElementById('oversBar').style.width = pct + '%';
+
+  // Fire over-complete toast
+  if (ballsInOver === 0 && overs > 0 && overs < maxOvers) {
+    showOverToast(overs);
+  }
 
   const badge = document.getElementById('targetBadge');
   if (inning === 2 && target !== null) {
