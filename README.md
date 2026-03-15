@@ -3,7 +3,7 @@
 A simple, mobile-friendly cricket scoring app you can use right from your browser — no install needed.
 
 ## Live Demo
-👉 [https://YOUR-USERNAME.github.io/cricket-scorer](https://YOUR-USERNAME.github.io/cricket-scorer)
+👉 https://prabaswt.github.io/Cricket_scorer/
 
 ## Features
 
