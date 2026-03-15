@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cricket Score Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green:   #16a34a;
+    --green-l: #dcfce7;
+    --red:     #dc2626;
+    --red-l:   #fee2e2;
+    --blue:    #1d4ed8;
+    --blue-l:  #dbeafe;
+    --gold:    #d97706;
+    --gold-l:  #fef3c7;
+    --purple:  #7c3aed;
+    --purple-l:#ede9fe;
+    --orange:  #ea580c;
+    --orange-l:#ffedd5;
+    --bg:      #f1f5f9;
+    --card:    #ffffff;
+    --border:  #cbd5e1;
+    --text:    #0f172a;
+    --muted:   #64748b;
+    --sub:     #94a3b8;
+  }
+
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 14px 32px;
+  }
+
+  /* ══ SETUP ══ */
+  #setupScreen { width: 100%; max-width: 420px; margin-top: 32px; }
+
+  #setupScreen h1 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 2rem;
+    text-align: center;
+    color: var(--green);
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+
+  .setup-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.07);
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  .field input:focus { border-color: var(--green); }
+
+  .overs-presets { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 8px; }
+
+  .preset-pill {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+
+  .preset-pill:hover { border-color: var(--green); color: var(--green); }
+  .preset-pill.active { background: var(--green); border-color: var(--green); color: white; }
+
+  .overs-custom-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s;
+    text-align: center;
+  }
+
+  .overs-custom-input:focus { border-color: var(--green); }
+
+  #startBtn {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 11px;
+    padding: 14px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 4px;
+    transition: opacity .2s, transform .1s;
+    box-shadow: 0 4px 14px rgba(22,163,74,.3);
+  }
+
+  #startBtn:hover { opacity: .88; transform: scale(1.02); }
+
+  /* ══ GAME ══ */
+  #gameScreen { display: none; width: 100%; max-width: 420px; }
+
+  .scoreboard {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    margin-bottom: 10px;
+    position: relative;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+
+  .innings-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--green); margin-bottom: 2px;
+  }
+
+  .team-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.25rem; font-weight: 700; color: var(--text);
+  }
+
+  .score-row { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+
+  .big-score {
+    font-family: 'Oswald', sans-serif;
+    font-size: 2.8rem; font-weight: 700; color: var(--text); line-height: 1;
+  }
+
+  .wickets-score {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.3rem; color: var(--muted);
+  }
+
+  .overs-info {
+    font-size: 14px; font-weight: 600; color: var(--muted); margin-top: 4px;
+    display: inline-flex; align-items: center; gap: 2px;
+    background: #e0f2fe; color: #0369a1;
+    border-radius: 6px; padding: 3px 9px;
+  }
+
+  .overs-bar-wrap {
+    background: #e2e8f0; border-radius: 4px; height: 5px; margin-top: 8px; overflow: hidden;
+  }
+
+  .overs-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), #86efac);
+    border-radius: 4px; transition: width .4s ease;
+  }
+
+  .target-badge {
+    position: absolute; top: 14px; right: 14px;
+    background: var(--red); color: white;
+    font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px; letter-spacing: 1px;
+  }
+
+  /* Stats Strip */
+  .stats-strip { display: flex; gap: 8px; margin-bottom: 10px; }
+
+  .stat-chip {
+    flex: 1; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 6px; text-align: center;
+    box-shadow: 0 1px 6px rgba(0,0,0,.04);
+  }
+
+  .stat-val {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.4rem; font-weight: 700; display: block; line-height: 1;
+  }
+
+  .stat-lbl { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+  .stat-four .stat-val { color: var(--green); }
+  .stat-six  .stat-val { color: var(--gold);  }
+  .stat-wkt  .stat-val { color: var(--red);   }
+  .stat-wide .stat-val { color: var(--purple); }
+
+  /* Innings 1 compact summary bar */
+  #inn1History {
+    display: none;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-left: 4px solid var(--green);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 6px rgba(22,163,74,.08);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .inn1-header {
+    font-size: 10px; font-weight: 700; color: var(--green);
+    text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;
+  }
+
+  .inn1-summary {
+    font-family: 'Oswald', sans-serif;
+    font-size: .92rem; color: var(--text); flex: 1;
+  }
+
+  /* Ball Log */
+  #ballLog {
+    display: flex; flex-wrap: wrap; gap: 5px; min-height: 44px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px; margin-bottom: 10px;
+    align-items: center; box-shadow: 0 1px 6px rgba(0,0,0,.04);
+  }
+
+  .ball-chip {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; flex-shrink: 0;
+    border: 2px solid transparent;
+  }
+
+  .ball-dot    { background: #f1f5f9; color: var(--muted);   border-color: #e2e8f0; }
+  .ball-run    { background: #eff6ff; color: var(--blue);    border-color: #bfdbfe; }
+  .ball-four   { background: var(--green-l); color: var(--green); border-color: #86efac; }
+  .ball-six    { background: var(--gold-l);  color: var(--gold);  border-color: #fcd34d; }
+  .ball-wicket { background: var(--red-l);   color: var(--red);   border-color: #fca5a5; }
+  .ball-wide   { background: var(--purple-l);color: var(--purple);border-color: #c4b5fd; }
+  .ball-noball { background: var(--orange-l);color: var(--orange);border-color: #fdba74; }
+
+  .over-pipe { color: var(--sub); font-weight: 700; font-size: 16px; padding: 0 2px; }
+
+  /* Buttons */
+  .btn-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 9px; margin-bottom: 9px;
+  }
+
+  .btn {
+    padding: 14px 8px; border: none; border-radius: 10px;
+    font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600;
+    cursor: pointer; letter-spacing: .5px;
+    transition: transform .1s, box-shadow .15s;
+    color: white;
+  }
+
+  .btn:active { transform: scale(.95); }
+
+  .btn-green  { background: var(--green);  box-shadow: 0 3px 8px rgba(22,163,74,.22); }
+  .btn-red    { background: var(--red);    box-shadow: 0 3px 8px rgba(220,38,38,.22); }
+  .btn-blue   { background: var(--blue);   box-shadow: 0 3px 8px rgba(29,78,216,.22); }
+  .btn-gold   { background: var(--gold);   box-shadow: 0 3px 8px rgba(217,119,6,.22); }
+  .btn-purple { background: var(--purple); box-shadow: 0 3px 8px rgba(124,58,237,.22); }
+  .btn-orange { background: var(--orange); box-shadow: 0 3px 8px rgba(234,88,12,.22); }
+
+  .action-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+  .action-row .btn { font-size: 13px; padding: 11px 4px; }
+
+  /* ══ MODALS ══ */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,.4); backdrop-filter: blur(4px); z-index: 100;
+  }
+  .overlay.show { display: block; }
+
+  .modal {
+    display: none; position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -58%) scale(.82);
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 26px 22px 22px;
+    z-index: 200; width: min(340px, 92vw); text-align: center;
+    transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .2s;
+    opacity: 0; box-shadow: 0 20px 60px rgba(0,0,0,.15);
+  }
+
+  .modal.show {
+    display: block;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  .modal-emoji  { font-size: 50px; display: block; margin-bottom: 8px; }
+  .modal-title  { font-family: 'Oswald', sans-serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+  .modal-sub    { font-size: 15px; font-weight: 500; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+  .modal-sub strong { color: var(--text); }
+  .modal h3     { font-family: 'Oswald', sans-serif; font-size: 1.2rem; margin-bottom: 4px; }
+
+  .modal-btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .modal-btn-row .btn { padding: 11px 22px; font-size: 15px; border-radius: 9px; min-width: 110px; }
+
+  #fourModal   { border-color: var(--green); } #fourModal .modal-title   { color: var(--green); }
+  #sixModal    { border-color: var(--gold);  } #sixModal  .modal-title   { color: var(--gold);  }
+  #wicketModal { border-color: var(--red);   } #wicketModal .modal-title { color: var(--red);   }
+  #inningsModal{ border-color: var(--gold);  } #inningsModal .modal-title{ color: var(--gold);  }
+  #winModal    { border-color: var(--green); } #winModal  .modal-title   { color: var(--green); }
+
+  .no-ball-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 16px; }
+  .no-ball-grid .btn { padding: 10px 4px; font-size: 14px; }
+
+  /* Confirm modal */
+  #confirmModal { border-color: var(--gold); }
+  #confirmModal .modal-title { color: var(--gold); }
+  #confirmModal .modal-sub { margin-bottom: 14px; }
+
+  /* Overs edit modal */
+  #oversEditModal { border-color: var(--blue); }
+  #oversEditModal .modal-title { color: var(--blue); }
+  .overs-modal-input {
+    width: 120px; text-align: center;
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 9px; padding: 10px;
+    font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700;
+    color: var(--text); outline: none; transition: border-color .2s;
+    display: block; margin: 0 auto;
+  }
+  .overs-modal-input:focus { border-color: var(--blue); }
+
+  /* Overs edit pencil */
+  .overs-edit-icon {
+    background: none; border: none; cursor: pointer;
+    font-size: 13px; padding: 2px 4px; margin-left: 4px;
+    opacity: .5; transition: opacity .15s; vertical-align: middle;
+    line-height: 1;
+  }
+  .overs-edit-icon:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP ══ -->
+<div id="setupScreen">
+  <h1>🏏 CRICKET SCORER</h1>
+  <div class="setup-card">
+    <div class="field">
+      <label>Team 1 — Batting First</label>
+      <input type="text" id="team1" placeholder="e.g. Chennai Super Kings" maxlength="30">
+    </div>
+    <div class="field">
+      <label>Team 2 — Chasing</label>
+      <input type="text" id="team2" placeholder="e.g. Mumbai Indians" maxlength="30">
+    </div>
+    <div class="field">
+      <label>Overs Per Innings</label>
+      <div class="overs-presets" id="presetBtns">
+        <button class="preset-pill" onclick="setPreset(1)">1</button>
+        <button class="preset-pill" onclick="setPreset(5)">5</button>
+        <button class="preset-pill" onclick="setPreset(10)">10</button>
+        <button class="preset-pill active" onclick="setPreset(20)">20</button>
+        <button class="preset-pill" onclick="setPreset(50)">50</button>
+      </div>
+      <input class="overs-custom-input" type="number" id="oversInput" value="20" min="1" max="999"
+        placeholder="or type any number" oninput="clearPresets()">
+    </div>
+    <button id="startBtn" onclick="startMatch()">START MATCH</button>
+  </div>
+</div>
+
+<!-- ══ GAME ══ -->
+<div id="gameScreen">
+  <div class="scoreboard">
+    <div class="innings-label" id="inningsLabel">INNINGS 1</div>
+    <div class="team-name" id="battingTeamName">—</div>
+    <div class="score-row">
+      <div class="big-score" id="score">0</div>
+      <div class="wickets-score" id="wicketsDisplay">/ 0 wkts</div>
+    </div>
+    <div class="overs-info">
+      <span id="oversInfo">Over 0.0 / 20</span>
+      <button class="overs-edit-icon" id="oversEditIcon" onclick="showOversEditModal()" title="Edit max overs">✏️</button>
+    </div>
+    <div class="overs-bar-wrap"><div class="overs-bar-fill" id="oversBar" style="width:0%"></div></div>
+    <div class="target-badge" id="targetBadge" style="display:none"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-chip stat-four">
+      <span class="stat-val" id="statFours">0</span>
+      <span class="stat-lbl">Fours 🟢</span>
+    </div>
+    <div class="stat-chip stat-six">
+      <span class="stat-val" id="statSixes">0</span>
+      <span class="stat-lbl">Sixes 🟡</span>
+    </div>
+    <div class="stat-chip stat-wkt">
+      <span class="stat-val" id="statWkts">0</span>
+      <span class="stat-lbl">Wickets 🔴</span>
+    </div>
+    <div class="stat-chip stat-wide">
+      <span class="stat-val" id="statWides">0</span>
+      <span class="stat-lbl">Wides 🟣</span>
+    </div>
+  </div>
+
+  <!-- 1st innings compact summary (shown in innings 2) -->
+  <div id="inn1History" style="display:none; flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;">
+    <div class="inn1-header">📋 <span id="inn1TeamLabel"></span></div>
+    <div class="inn1-summary" id="inn1Summary"></div>
+  </div>
+
+  <!-- Ball Log -->
+  <div id="ballLog"></div>
+
+  <!-- Run buttons -->
+  <div class="btn-grid">
+    <button class="btn btn-green"  onclick="addRuns(0)">0</button>
+    <button class="btn btn-green"  onclick="addRuns(1)">1</button>
+    <button class="btn btn-green"  onclick="addRuns(2)">2</button>
+    <button class="btn btn-green"  onclick="addRuns(3)">3</button>
+    <button class="btn btn-green"  onclick="addRuns(4)">4</button>
+    <button class="btn btn-green"  onclick="addRuns(5)">5</button>
+    <button class="btn btn-gold"   onclick="addRuns(6)">6</button>
+    <button class="btn btn-red"    onclick="addWicket()">Wicket</button>
+    <button class="btn btn-purple" onclick="addWide()">Wide</button>
+    <button class="btn btn-orange" onclick="showNoBallModal()">No Ball</button>
+  </div>
+
+  <div class="action-row">
+    <button class="btn btn-blue" onclick="undo()">↩ Undo</button>
+    <button class="btn btn-red"  onclick="newMatch()">New Match</button>
+    <button class="btn btn-blue" onclick="triggerNextInnings()">Next Innings</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAYS ══ -->
+<div class="overlay" id="overlay"></div>
+
+<!-- No Ball -->
+<div class="modal" id="noBallModal">
+  <h3>🟠 No Ball – Extra Runs</h3>
+  <div class="no-ball-grid" id="noBallButtons"></div>
+  <div class="modal-btn-row">
+    <button class="btn btn-red" onclick="closeModal('noBallModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Four -->
+<div class="modal" id="fourModal">
+  <span class="modal-emoji">🎯</span>
+  <div class="modal-title">FOUR!</div>
+  <div class="modal-sub">Elegant shot to the boundary</div>
+  <div class="modal-btn-row">
+    <button class="btn btn-green" onclick="closeModal('fourModal')">Continue</button>
+  </div>
+</div>
+
+<!-- Six -->
+<div class="modal" id="sixModal">
+  <span class="modal-emoji">🚀</span>
+  <div class="modal-title">SIX!</div>
+  <div class="modal-sub">Huge hit — over the ropes!</div>
+  <div class="modal-btn-row">
+    <button class="btn btn-gold" onclick="closeModal('sixModal')">Continue</button>
+  </div>
+</div>
+
+<!-- Wicket -->
+<div class="modal" id="wicketModal">
+  <span class="modal-emoji">💥</span>
+  <div class="modal-title">WICKET!</div>
+  <div class="modal-sub" id="wicketSub">Batsman is out!</div>
+  <div class="modal-btn-row">
+    <button class="btn btn-red" onclick="closeModal('wicketModal')">Continue</button>
+  </div>
+</div>
+
+<!-- Innings End -->
+<div class="modal" id="inningsModal">
+  <span class="modal-emoji">📋</span>
+  <div class="modal-title">INNINGS COMPLETE</div>
+  <div class="modal-sub" id="inningsSub"></div>
+  <div class="modal-btn-row">
+    <button class="btn btn-gold" onclick="closeAndNextInnings()">Start Chase 🏏</button>
+  </div>
+</div>
+
+<!-- Overs Edit Modal -->
+<div class="modal" id="oversEditModal">
+  <span class="modal-emoji">🔧</span>
+  <div class="modal-title">EDIT MAX OVERS</div>
+  <div class="modal-sub">Change the total overs for this innings.</div>
+  <input class="overs-modal-input" type="number" id="oversEditInput" min="1" max="999" placeholder="e.g. 7">
+  <div class="modal-btn-row" style="margin-top:14px;">
+    <button class="btn btn-green" onclick="applyOversEdit()">Update</button>
+    <button class="btn btn-blue"  onclick="closeModal('oversEditModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal" id="confirmModal">
+  <span class="modal-emoji">⚠️</span>
+  <div class="modal-title">ARE YOU SURE?</div>
+  <div class="modal-sub" id="confirmSub">This action cannot be undone.</div>
+  <div class="modal-btn-row">
+    <button class="btn btn-gold"  id="confirmYesBtn">Yes, Proceed</button>
+    <button class="btn btn-blue"  onclick="closeModal('confirmModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Win -->
+<div class="modal" id="winModal">
+  <span class="modal-emoji">🏆</span>
+  <div class="modal-title">MATCH RESULT</div>
+  <div class="modal-sub" id="winSub"></div>
+  <div class="modal-btn-row">
+    <button class="btn btn-green" onclick="closeModal('winModal')">Close</button>
+    <button class="btn btn-blue"  onclick="newMatch()">New Match</button>
+  </div>
+</div>
+
+<script>
+/* ─── STATE ─── */
+let score, wickets, overs, ballsInOver, history, target, inning, matchOver;
+let team1, team2, maxOvers;
+let inn1Score, inn1Wickets, inn1Overs, inn1Balls, inn1History, inn1Fours, inn1Sixes, inn1Wides;
+
+/* ─── SETUP ─── */
+function setPreset(n) {
+  document.getElementById('oversInput').value = n;
+  document.querySelectorAll('.preset-pill').forEach(p =>
+    p.classList.toggle('active', parseInt(p.textContent) === n));
+}
+
+function clearPresets() {
+  document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active'));
+}
+
+function startMatch() {
+  team1    = document.getElementById('team1').value.trim() || 'Team 1';
+  team2    = document.getElementById('team2').value.trim() || 'Team 2';
+  maxOvers = Math.max(1, parseInt(document.getElementById('oversInput').value) || 20);
+  resetState(1);
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display  = 'block';
+  document.getElementById('inn1History').style.display = 'none';
+  renderLog();
+}
+
+function resetState(inn) {
+  score = wickets = overs = ballsInOver = 0;
+  history = []; inning = inn; matchOver = false;
+}
+
+/* ─── ACTIONS ─── */
+function addRuns(runs) {
+  if (matchOver) return;
+  history.push({ type: 'run', runs });
+  renderLog();
+  if (runs === 4) showModal('fourModal');
+  if (runs === 6) showModal('sixModal');
+}
+
+function addWicket() {
+  if (matchOver) return;
+  history.push({ type: 'wicket' });
+  renderLog();
+  document.getElementById('wicketSub').innerText =
+    `${wickets} wicket${wickets !== 1 ? 's' : ''} fallen`;
+  showModal('wicketModal');
+}
+
+function addWide() {
+  if (matchOver) return;
+  history.push({ type: 'wide' });
+  renderLog();
+}
+
+function showNoBallModal() {
+  if (matchOver) return;
+  const btns = document.getElementById('noBallButtons');
+  btns.innerHTML = '';
+  for (let i = 0; i <= 6; i++) {
+    const b = document.createElement('button');
+    b.className = 'btn btn-orange';
+    b.innerText  = i === 0 ? '0' : '+' + i;
+    b.onclick = () => addNoBall(i);
+    btns.appendChild(b);
+  }
+  showModal('noBallModal');
+}
+
+function addNoBall(extra) {
+  history.push({ type: 'noBall', runs: extra });
+  closeModal('noBallModal');
+  renderLog();
+}
+
+function undo() {
+  if (matchOver) matchOver = false;
+  history.pop();
+  renderLog();
+}
+
+function newMatch() {
+  if (history.length > 0 && !matchOver) {
+    confirmAction(
+      'Start a new match? All current scores will be lost.',
+      () => { closeAllModals(); doNewMatch(); }
+    );
+    return;
+  }
+  closeAllModals(); doNewMatch();
+}
+
+function doNewMatch() {
+  document.getElementById('gameScreen').style.display  = 'none';
+  document.getElementById('setupScreen').style.display = 'block';
+  target = null;
+}
+
+/* Manual next innings */
+function triggerNextInnings() {
+  if (inning !== 1) return;
+  if (history.length > 0 && !matchOver) {
+    confirmAction(
+      `End 1st innings now? ${team1} scored ${score}/${wickets} in ${overs}.${ballsInOver} overs.`,
+      () => { closeModal('confirmModal'); doNextInnings(); }
+    );
+    return;
+  }
+  doNextInnings();
+}
+
+function doNextInnings() {
+  saveInn1();
+  target = score + 1;
+  buildInningsModal();
+  showModal('inningsModal');
+}
+
+function confirmAction(msg, onYes) {
+  document.getElementById('confirmSub').innerText = msg;
+  document.getElementById('confirmYesBtn').onclick = onYes;
+  showModal('confirmModal');
+}
+
+function saveInn1() {
+  inn1Score   = score; inn1Wickets = wickets;
+  inn1Overs   = overs; inn1Balls   = ballsInOver;
+  inn1History = [...history];
+  inn1Fours   = history.filter(i => i.type === 'run' && i.runs === 4).length;
+  inn1Sixes   = history.filter(i => i.type === 'run' && i.runs === 6).length;
+  inn1Wides   = history.filter(i => i.type === 'wide').length;
+}
+
+function buildInningsModal() {
+  const f = history.filter(i => i.type === 'run' && i.runs === 4).length;
+  const s = history.filter(i => i.type === 'run' && i.runs === 6).length;
+  document.getElementById('inningsSub').innerHTML =
+    `<strong>${team1}</strong> scored <strong>${score}/${wickets}</strong> in ${overs}.${ballsInOver} overs.<br>
+     🟢 ${f} Fours &nbsp;·&nbsp; 🟡 ${s} Sixes<br><br>
+     <strong>${team2}</strong> needs <strong>${target}</strong> runs to win!`;
+}
+
+function closeAndNextInnings() {
+  closeModal('inningsModal');
+  showInn1Panel();
+  resetState(2);
+  renderLog();
+}
+
+function showInn1Panel() {
+  const el = document.getElementById('inn1History');
+  el.style.display = 'flex';
+  document.getElementById('inn1TeamLabel').innerText = team1 + ' —';
+  document.getElementById('inn1Summary').innerText   =
+    `${inn1Score}/${inn1Wickets}  (${inn1Overs}.${inn1Balls} ov)  ·  4s: ${inn1Fours}  ·  6s: ${inn1Sixes}  ·  Wides: ${inn1Wides}`;
+}
+
+function showOversEditModal() {
+  document.getElementById('oversEditInput').value = maxOvers;
+  showModal('oversEditModal');
+}
+
+function applyOversEdit() {
+  const val = Math.max(1, parseInt(document.getElementById('oversEditInput').value) || maxOvers);
+  if (val < overs) {
+    closeModal('oversEditModal');
+    confirmAction(
+      `Set max overs to ${val}? Current over count is already ${overs}.${ballsInOver}.`,
+      () => { maxOvers = val; closeModal('confirmModal'); renderLog(); }
+    );
+    return;
+  }
+  maxOvers = val;
+  closeModal('oversEditModal');
+  renderLog();
+}
+
+/* ─── RECALC ─── */
+function recalculate() {
+  score = wickets = 0;
+  let legal = 0;
+  history.forEach(item => {
+    if      (item.type === 'run')    { score += item.runs; legal++; }
+    else if (item.type === 'wicket') { wickets++; legal++; }
+    else if (item.type === 'wide')   { score += 1; }
+    else if (item.type === 'noBall') { score += item.runs; }
+  });
+  overs       = Math.floor(legal / 6);
+  ballsInOver = legal % 6;
+}
+
+/* ─── CHIPS ─── */
+function renderChips(hist, container) {
+  container.innerHTML = '';
+  let legal = 0;
+  hist.forEach(item => {
+    if (legal > 0 && legal % 6 === 0 && item.type !== 'wide' && item.type !== 'noBall') {
+      const p = document.createElement('span');
+      p.className = 'over-pipe'; p.innerText = '|';
+      container.appendChild(p);
+    }
+    const chip = document.createElement('div');
+    chip.className = 'ball-chip';
+    if (item.type === 'run') {
+      if      (item.runs === 0) { chip.className += ' ball-dot';    chip.innerText = '0'; }
+      else if (item.runs === 4) { chip.className += ' ball-four';   chip.innerText = '4'; }
+      else if (item.runs === 6) { chip.className += ' ball-six';    chip.innerText = '6'; }
+      else                      { chip.className += ' ball-run';    chip.innerText = item.runs; }
+      legal++;
+    } else if (item.type === 'wicket') {
+      chip.className += ' ball-wicket'; chip.innerText = 'W'; legal++;
+    } else if (item.type === 'wide') {
+      chip.className += ' ball-wide'; chip.innerText = 'WB';
+    } else if (item.type === 'noBall') {
+      chip.className += ' ball-noball';
+      chip.innerText = item.runs === 0 ? 'NB' : 'NB+' + item.runs;
+      chip.style.width = '42px'; chip.style.borderRadius = '12px'; chip.style.fontSize = '11px';
+    }
+    container.appendChild(chip);
+  });
+}
+
+/* ─── RENDER ─── */
+function renderLog() {
+  recalculate();
+  renderChips(history, document.getElementById('ballLog'));
+  updateDisplay();
+}
+
+function updateDisplay() {
+  document.getElementById('score').innerText          = score;
+  document.getElementById('wicketsDisplay').innerText = `/ ${wickets} wkt${wickets !== 1 ? 's' : ''}`;
+  document.getElementById('oversInfo').innerText      = `Over ${overs}.${ballsInOver} / ${maxOvers}`;
+  document.getElementById('inningsLabel').innerText   = `INNINGS ${inning}`;
+  document.getElementById('battingTeamName').innerText = inning === 1 ? team1 : team2;
+  // pencil only in innings 1
+  document.getElementById('oversEditIcon').style.display = inning === 1 ? '' : 'none';
+
+  const fours = history.filter(i => i.type === 'run' && i.runs === 4).length;
+  const sixes = history.filter(i => i.type === 'run' && i.runs === 6).length;
+  const wides = history.filter(i => i.type === 'wide').length;
+  document.getElementById('statFours').innerText = fours;
+  document.getElementById('statSixes').innerText = sixes;
+  document.getElementById('statWkts').innerText  = wickets;
+  document.getElementById('statWides').innerText = wides;
+
+  const pct = Math.min(100, ((overs * 6 + ballsInOver) / (maxOvers * 6)) * 100);
+  document.getElementById('oversBar').style.width = pct + '%';
+
+  const badge = document.getElementById('targetBadge');
+  if (inning === 2 && target !== null) {
+    badge.style.display = 'block';
+    badge.innerText = 'Target: ' + target;
+  } else { badge.style.display = 'none'; }
+
+  // Innings 1 overs done
+  if (!matchOver && inning === 1 && overs >= maxOvers && ballsInOver === 0 && history.length > 0) {
+    matchOver = true;
+    saveInn1();
+    target = score + 1;
+    buildInningsModal();
+    setTimeout(() => showModal('inningsModal'), 300);
+    return;
+  }
+
+  // Innings 2 overs done – batting side fell short
+  if (!matchOver && inning === 2 && overs >= maxOvers && ballsInOver === 0 && history.length > 0) {
+    matchOver = true;
+    document.getElementById('winSub').innerHTML =
+      `<strong>${team1}</strong> wins! 🎉<br>${team2} scored ${score}/${wickets} and fell short of ${target}.`;
+    setTimeout(() => showModal('winModal'), 300);
+    return;
+  }
+
+  // Chase successful
+  if (!matchOver && inning === 2 && target !== null && score >= target) {
+    matchOver = true;
+    document.getElementById('winSub').innerHTML =
+      `<strong>${team2}</strong> wins! 🎉<br>Chase successful — ${score}/${wickets} in ${overs}.${ballsInOver} overs.`;
+    showModal('winModal');
+  }
+}
+
+/* ─── MODALS ─── */
+function showModal(id) {
+  document.getElementById('overlay').classList.add('show');
+  const m = document.getElementById(id);
+  m.style.display = 'block';
+  requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('show')));
+}
+
+function closeModal(id) {
+  const m = document.getElementById(id);
+  m.classList.remove('show');
+  setTimeout(() => { m.style.display = 'none'; }, 280);
+  setTimeout(() => {
+    const open = ['noBallModal','fourModal','sixModal','wicketModal','inningsModal','oversEditModal','confirmModal','winModal']
+      .some(mid => document.getElementById(mid).classList.contains('show'));
+    if (!open) document.getElementById('overlay').classList.remove('show');
+  }, 290);
+}
+
+function closeAllModals() {
+  ['noBallModal','fourModal','sixModal','wicketModal','inningsModal','oversEditModal','confirmModal','winModal'].forEach(id => {
+    const m = document.getElementById(id);
+    m.classList.remove('show'); m.style.display = 'none';
+  });
+  document.getElementById('overlay').classList.remove('show');
+}
+</script>
+</body>
+</html>
